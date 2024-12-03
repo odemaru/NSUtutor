@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Главная</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+<!-- Header -->
+<header class="bg-white shadow-sm sticky top-0 z-10">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+        <div class="flex items-center gap-4">
+            <a href="search.html" class="text-gray-600 hover:text-blue-600">Поиск</a>
+            <span class="text-blue-600 font-semibold">Главная</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <a href="#" class="text-gray-600 hover:text-blue-600">Мессенджер</a>
+            <a href="#" class="text-gray-600 hover:text-blue-600">Мои объявления</a>
+            <a href="#" class="text-gray-600 hover:text-blue-600">Профиль</a>
+        </div>
+    </div>
+</header>
+
+<!-- Main Content -->
+<main class="container mx-auto px-4 py-12">
+    <section class="text-center max-w-3xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-800 mb-4">Добро пожаловать на наш сайт!</h1>
+        <p class="text-lg text-gray-700 mb-6">
+            Это место, где студенты и репетиторы могут легко находить друг друга.
+            Здесь вы можете разместить объявление, искать подходящих учителей или учеников,
+            и строить успешные образовательные связи.
+        </p>
+        <p class="text-lg text-gray-700 mb-6">
+            Уже есть аккаунт? Войдите, чтобы управлять вашими объявлениями.
+            Или создайте аккаунт и начните прямо сейчас!
+        </p>
+        <div class="flex justify-center gap-4">
+            <a href="#" class="bg-blue-500 text-white text-lg font-semibold py-3 px-6 rounded-lg hover:bg-blue-600">
+                Войти
+            </a>
+            <a href="#" class="bg-gray-100 text-gray-700 text-lg font-semibold py-3 px-6 rounded-lg hover:bg-gray-200">
+                Создать аккаунт
+            </a>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="mt-16">
+        <h2 class="text-2xl font-semibold text-gray-800 text-center mb-6">Почему выбирают нас?</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Feature 1 -->
+            <div class="text-center p-6 bg-white shadow-md rounded-lg">
+                <svg class="w-12 h-12 text-blue-500 mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10 2a6 6 0 00-6 6v4a6 6 0 1012 0V8a6 6 0 00-6-6zm3 10a3 3 0 11-6 0v-4a3 3 0 016 0v4z"></path>
+                </svg>
+                <h3 class="text-xl font-semibold mb-2">Надежность</h3>
+                <p class="text-gray-600">Мы создаем безопасную платформу для поиска репетиторов и студентов.</p>
+            </div>
+            <!-- Feature 2 -->
+            <div class="text-center p-6 bg-white shadow-md rounded-lg">
+                <svg class="w-12 h-12 text-blue-500 mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M17 8h-6V2H9v6H3v2h6v6h2v-6h6V8z"></path>
+                </svg>
+                <h3 class="text-xl font-semibold mb-2">Удобство</h3>
+                <p class="text-gray-600">Простая навигация и удобные фильтры для поиска.</p>
+            </div>
+            <!-- Feature 3 -->
+            <div class="text-center p-6 bg-white shadow-md rounded-lg">
+                <svg class="w-12 h-12 text-blue-500 mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M3 4a2 2 0 012-2h10a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V4zm2 0h10v12H5V4z"></path>
+                </svg>
+                <h3 class="text-xl font-semibold mb-2">Разнообразие</h3>
+                <p class="text-gray-600">Широкий выбор репетиторов и предметов для обучения.</p>
+            </div>
+        </div>
+    </section>
+</main>
+
+</body>
+</html>
