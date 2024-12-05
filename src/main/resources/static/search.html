@@ -41,25 +41,6 @@
 </main>
 
 <script type="module">
-    // Sample data to simulate database records
-    const tutorData = [
-        {
-            type: 'Ищу репетитора',
-            subject: 'Высшая математика, 3 курс ФИТ',
-            photo: 'https://source.unsplash.com/100x100/?person,math' // Replace with your photo URL or null if not available
-        },
-        {
-            type: 'Ищу студентов',
-            subject: 'Английский язык, старшие классы',
-            photo: null
-        },
-        {
-            type: 'Ищу репетитора',
-            subject: 'Программирование, 2 курс ИТ',
-            photo: 'https://source.unsplash.com/100x100/?coding,student'
-        }
-    ];
-
     const container = document.getElementById('cards-container');
 
     // Function to create a card
@@ -70,7 +51,7 @@
         // Add type (e.g., "Ищу репетитора")
         const type = document.createElement('h3');
         type.className = 'text-lg font-semibold mb-2';
-        type.textContent = data.type;
+        type.textContent = data.searchType;
         card.appendChild(type);
 
         // Add subject and course
@@ -102,11 +83,28 @@
         return card;
     }
 
-    // Render all cards
-    tutorData.forEach(data => {
-        const card = createCard(data);
-        container.appendChild(card);
-    });
+    // Fetch data from backend and render cards
+    async function loadCards() {
+        try {
+            const response = await fetch('http://localhost:8080/api/ads');
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status} ${response.statusText}`);
+            }
+            const data = await response.json(); // Ожидаем JSON
+            console.log("Ads received:", data); // Для отладки
+            data.forEach((ad) => {
+                const card = createCard(ad);
+                container.appendChild(card);
+            });
+        } catch (error) {
+            console.error('Error fetching ads:', error);
+            alert('Failed to load ads. Check the console for more details.');
+        }
+    }
+
+
+    // Load cards on page load
+    loadCards();
 </script>
 </body>
 </html>

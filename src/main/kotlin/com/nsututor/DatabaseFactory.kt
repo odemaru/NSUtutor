@@ -1,5 +1,6 @@
 package com.nsututor
 
+import com.sun.tools.javac.resources.CompilerProperties
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -17,9 +18,10 @@ object DatabaseFactory {
         // Создание таблиц при старте
         transaction {
             SchemaUtils.create(Users)
+            SchemaUtils.create(Ads)
         }
 
-        // Добавление пользователя "root", если его нет
         User.addRootUserIfNotExists()
+        AdService.insertSampleAdsIfNotExist()
     }
 }

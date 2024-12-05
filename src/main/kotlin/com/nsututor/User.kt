@@ -9,6 +9,7 @@ object Users : Table() {
     val id = integer("id").autoIncrement()
     val username = varchar("username", 255).uniqueIndex()
     val password = varchar("password", 255) // Хешированный пароль
+    val role = varchar("role", 50).nullable()
     override val primaryKey = PrimaryKey(id)
 }
 
@@ -18,7 +19,7 @@ class User(val id: Int, val username: String, val password: String) {
     companion object {
 
         // Регистрация пользователя с хешированием пароля
-        fun register(username: String, password: String) {
+        fun register(username: String, password: String, role: String) {
             transaction {
                 // Хешируем пароль перед сохранением
                 val hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt())
@@ -33,6 +34,7 @@ class User(val id: Int, val username: String, val password: String) {
                 Users.insert {
                     it[Users.username] = username
                     it[Users.password] = hashedPassword
+                    it[Users.role] = role
                 }
             }
         }
@@ -60,6 +62,7 @@ class User(val id: Int, val username: String, val password: String) {
                     Users.insert {
                         it[Users.username] = "root"
                         it[Users.password] = hashedPassword
+                        it[Users.role] = "Student"
                     }
                 }
             }
