@@ -19,9 +19,11 @@ object DatabaseFactory {
         transaction {
             SchemaUtils.create(Users)
             SchemaUtils.create(Ads)
+            SchemaUtils.create(Messages)
         }
 
         User.addRootUserIfNotExists()
         AdService.insertSampleAdsIfNotExist()
+//        MessengerService.createInitialConversation()
     }
 }

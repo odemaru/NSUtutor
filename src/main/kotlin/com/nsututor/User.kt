@@ -57,10 +57,15 @@ class User(val id: Int, val username: String, val password: String) {
         fun addRootUserIfNotExists() {
             transaction {
                 val existingUser = Users.select { Users.username eq "root" }.singleOrNull()
-                if (existingUser == null) {
+                if (existingUser ==  null) {
                     val hashedPassword = BCrypt.hashpw("root", BCrypt.gensalt())
                     Users.insert {
                         it[Users.username] = "root"
+                        it[Users.password] = hashedPassword
+                        it[Users.role] = "Student"
+                    }
+                    Users.insert {
+                        it[Users.username] = "root2"
                         it[Users.password] = hashedPassword
                         it[Users.role] = "Student"
                     }

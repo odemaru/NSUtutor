@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Messenger</title>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    #message-container {
+      border: 1px solid #ccc;
+      height: 400px;
+      overflow-y: scroll;
+      margin-bottom: 20px;
+    }
+    .message {
+      margin: 10px;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    .sent {
+      background-color: #e6f3ff;
+      text-align: right;
+    }
+    .received {
+      background-color: #f0f0f0;
+    }
+  </style>
+</head>
+<body>
+<h1>Messenger</h1>
+
+<div>
+  <label for="sender">Sender ID:</label>
+  <input type="number" id="sender" required>
+
+  <label for="receiver">Receiver ID:</label>
+  <input type="number" id="receiver" required>
+</div>
+
+<div id="message-container"></div>
+
+<div>
+  <textarea id="message-input" rows="3" cols="50" placeholder="Type your message..."></textarea>
+  <button onclick="sendMessage()">Send</button>
+  <button onclick="loadMessages()">Refresh Messages</button>
+</div>
+
+<script>
+  let currentSenderId = null;
+  let currentReceiverId = null;
+
+  function sendMessage() {
+    const senderId = document.getElementById('sender').value;
+    const receiverId = document.getElementById('receiver').value;
+    const content = document.getElementById('message-input').value;
+
+    if (!senderId || !receiverId || !content) {
+      alert('Please fill all fields');
+      return;
+    }
+
+    axios.post('/api/messages/send', new URLSearchParams({
+      senderId,
+      receiverId,
+      content
+    }))
+            .then(response => {
+              document.getElementById('message-input').value = '';
+              loadMessages(senderId, receiverId);
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              alert('Failed to send message');
+            });
+  }
+
+  function loadMessages(senderId = null, receiverId = null) {
+    senderId = senderId || document.getElementById('sender').value;
+    receiverId = receiverId || document.getElementById('receiver').value;
+
+    if (!senderId || !receiverId) {
+      alert('Please enter sender and receiver IDs');
+      return;
+    }
+
+    // Store current context
+    currentSenderId = senderId;
+    currentReceiverId = receiverId;
+
+    axios.get(`/api/messages?user1Id=${senderId}&user2Id=${receiverId}`)
+            .then(response => {
+              const messageContainer = document.getElementById('message-container');
+              messageContainer.innerHTML = '';
+
+              response.data.forEach(msg => {
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message');
+                messageDiv.classList.add(msg.senderId == senderId ? 'sent' : 'received');
+                messageDiv.textContent = `${msg.content} (From: ${msg.senderId}, At: ${msg.timestamp})`;
+                messageContainer.appendChild(messageDiv);
+              });
+
+              // Scroll to bottom
+              messageContainer.scrollTop = messageContainer.scrollHeight;
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              alert('Failed to load messages');
+            });
+  }
+</script>
+</body>
+</html>
