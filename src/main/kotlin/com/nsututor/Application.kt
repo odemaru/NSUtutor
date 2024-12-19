@@ -6,11 +6,23 @@ import io.ktor.server.application.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.application.*
+import io.ktor.server.sessions.*
+import kotlinx.serialization.Serializable
 
 fun main(args: Array<String>) {
     io.ktor.server.netty.EngineMain.main(args)
 }
+@Serializable
+data class UserSession(val userId: Int, val username: String)
 
+// Конфигурация сессий
+fun Application.configureSessions() {
+    install(Sessions) {
+        cookie<UserSession>("USER_SESSION") {
+            cookie.httpOnly = true
+        }
+    }
+}
 fun Application.module() {
     install(CORS) {
         anyHost() // Разрешает запросы с любого источника. Использовать только для разработки!
@@ -24,4 +36,5 @@ fun Application.module() {
         json()
     }
     configureRouting()
+    configureSessions()
 }

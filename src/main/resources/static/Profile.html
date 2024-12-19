@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Профиль пользователя</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+<!-- Header -->
+<header class="bg-white shadow-sm sticky top-0 z-10">
+  <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+    <a href="/main" class="text-gray-600 hover:text-blue-600">Главная</a>
+    <span class="font-semibold text-lg text-blue-600">Профиль</span>
+  </div>
+</header>
+
+<!-- User Profile -->
+<main class="container mx-auto px-4 py-12 flex justify-center">
+  <div class="w-full max-w-lg bg-white p-6 rounded-lg shadow-md">
+    <h2 class="text-2xl font-semibold mb-6">Профиль пользователя</h2>
+
+    <!-- Username -->
+    <div class="mb-4">
+      <p class="text-lg font-medium">Имя пользователя: <span id="user-name">Загрузка...</span></p>
+    </div>
+
+    <!-- Change Password Button -->
+    <div class="mt-6">
+      <a href="/changePassword.html" id="change-password-btn" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
+        Изменить пароль
+      </a>
+    </div>
+  </div>
+</main>
+
+<script>
+  const token = sessionStorage.getItem('token');
+  let currentUserId = null;
+
+  // Функция для получения информации о пользователе
+  async function getUserInfo() {
+    try {
+      const response = await fetch('/api/user-info', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) throw new Error('Failed to get user info');
+
+      const userInfo = await response.text();
+      const userName = userInfo.match(/Logged in as (.*) \(ID: \d+\)/);
+
+      if (userName) {
+        document.getElementById('user-name').textContent = userName[1];
+        currentUserId = parseInt(userInfo.match(/ID: (\d+)/)[1]);
+      }
+    } catch (error) {
+      console.error('Error getting user info:', error);
+    }
+  }
+
+  // Функция для изменения пароля
+  async function changePassword() {
+    const newPassword = prompt('Введите новый пароль:');
+
+    if (newPassword) {
+      try {
+        const response = await fetch('/api/change-password', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: new URLSearchParams({
+            userId: currentUserId,
+            newPassword: newPassword
+          })
+        });
+
+        if (response.ok) {
+          alert('Пароль изменен успешно');
+        } else {
+          alert('Не удалось изменить пароль');
+        }
+      } catch (error) {
+        console.error('Error changing password:', error);
+        alert('Ошибка при изменении пароля');
+      }
+    }
+  }
+
+  // Обработчик кнопки изменения пароля
+  document.getElementById('change-password-btn').addEventListener('click', changePassword);
+
+  // Инициализация страницы
+  async function init() {
+    await getUserInfo();
+  }
+
+  init();
+</script>
+
+</body>
+</html>

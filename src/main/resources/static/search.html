@@ -22,9 +22,9 @@
             <a href="main.html" class="text-gray-600 hover:text-blue-600">Главная</a>
         </div>
         <div class="flex items-center gap-4">
-            <a href="Messenger.html" class="text-gray=600 hover:text-blue-600">Мессенджер</a>
-            <button class="text-gray-600 hover:text-blue-600">Мои объявления</button>
-            <button class="text-gray-600 hover:text-blue-600">Профиль</button>
+            <a href="Messenger.html" class="text-gray-600 hover:text-blue-600">Мессенджер</a>
+            <a href="/myads.html" class="text-gray-600 hover:text-blue-600">Мои объявления</a>
+            <a href="/Profile.html" class="text-gray-600 hover:text-blue-600">Профиль</a>
         </div>
     </div>
 </header>
@@ -33,7 +33,31 @@
 <main class="container mx-auto px-4 py-8">
     <!-- Search Bar -->
     <div class="mb-6">
-        <input type="text" placeholder="Search..." class="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
+        <input type="text" id="search-input" placeholder="Search by subject..." class="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
+    </div>
+
+    <!-- Filters -->
+    <div class="flex gap-4 mb-6">
+        <!-- Filter by Alphabet -->
+        <select id="alphabet-filter" class="px-4 py-2 border rounded-md">
+            <option value="asc">По алфавиту (А-Я)</option>
+            <option value="desc">По алфавиту (Я-А)</option>
+        </select>
+
+        <!-- Filter by Course -->
+        <select id="course-filter" class="px-4 py-2 border rounded-md">
+            <option value="">Фильтровать по курсу</option>
+            <option value="1">Курс 1</option>
+            <option value="2">Курс 2</option>
+            <option value="3">Курс 3</option>
+        </select>
+
+        <!-- Filter by Search Type (Student or Tutor) -->
+        <select id="search-type-filter" class="px-4 py-2 border rounded-md">
+            <option value="">Тип поиска</option>
+            <option value="Ищу студентов">Ищу студентов</option>
+            <option value="Ищу репетитора">Ищу репетитора</option>
+        </select>
     </div>
 
     <!-- Grid Layout for Dynamic Cards -->
@@ -42,25 +66,32 @@
 
 <script type="module">
     const container = document.getElementById('cards-container');
+    const searchInput = document.getElementById('search-input');
+    const alphabetFilter = document.getElementById('alphabet-filter');
+    const courseFilter = document.getElementById('course-filter');
+    const searchTypeFilter = document.getElementById('search-type-filter');
+    const token = sessionStorage.getItem('token'); // Получаем токен из sessionStorage
+    let currentUserId = null; // Идентификатор текущего пользователя
+    let ads = []; // Массив всех объявлений
 
-    // Function to create a card
+    // Функция для создания карточки
     function createCard(data) {
         const card = document.createElement('div');
         card.className = 'bg-white border shadow-sm rounded-lg p-4';
 
-        // Add type (e.g., "Ищу репетитора")
+        // Добавляем тип (например, "Ищу репетитора")
         const type = document.createElement('h3');
         type.className = 'text-lg font-semibold mb-2';
         type.textContent = data.searchType;
         card.appendChild(type);
 
-        // Add subject and course
+        // Добавляем предмет и курс
         const subject = document.createElement('p');
         subject.className = 'text-gray-700 text-sm mb-4';
         subject.textContent = data.subject;
         card.appendChild(subject);
 
-        // Add photo (if available)
+        // Добавляем фото (если есть)
         if (data.photo) {
             const photo = document.createElement('img');
             photo.src = data.photo;
@@ -74,37 +105,123 @@
             card.appendChild(placeholder);
         }
 
-        // Add "Contact" button
+        // Добавляем кнопку "Связаться"
         const button = document.createElement('button');
         button.className = 'bg-blue-500 text-white text-sm py-2 px-4 rounded-md hover:bg-blue-600';
         button.textContent = 'Связаться';
+        var author = data.authorId
+        button.addEventListener('click', () => handleContactClick(currentUserId, author)); // Обработчик для кнопки
         card.appendChild(button);
 
         return card;
     }
 
-    // Fetch data from backend and render cards
+    // Функция для обработки клика по кнопке "Связаться"
+    async function handleContactClick(currentUserId, authorId) {
+        try {
+            // Открываем или создаем переписку
+            const response = await fetch(`/api/messages/conversation/open?user1Id=${currentUserId}&user2Id=${authorId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to open conversation');
+            }
+
+            // Перенаправляем на страницу мессенджера с параметрами
+            window.location.href = `Messenger.html?userId=${currentUserId}&authorId=${authorId}`;
+        } catch (error) {
+            console.error('Error handling contact:', error);
+            alert('Ошибка при открытии переписки');
+        }
+    }
+
+    // Функция для фильтрации и отображения карточек
+    function filterAndDisplayAds() {
+        const searchQuery = searchInput.value.toLowerCase();
+        const selectedAlphabet = alphabetFilter.value;
+        const selectedCourse = courseFilter.value;
+        const selectedSearchType = searchTypeFilter.value;
+
+        let filteredAds = [...ads];
+
+        // Фильтрация по запросу
+        if (searchQuery) {
+            filteredAds = filteredAds.filter(ad => ad.subject.toLowerCase().includes(searchQuery));
+        }
+
+        // Фильтрация по алфавиту
+        if (selectedAlphabet === 'asc') {
+            filteredAds = filteredAds.sort((a, b) => a.subject.localeCompare(b.subject));
+        } else if (selectedAlphabet === 'desc') {
+            filteredAds = filteredAds.sort((a, b) => b.subject.localeCompare(a.subject));
+        }
+
+        // Фильтрация по курсу
+        if (selectedCourse) {
+            filteredAds = filteredAds.filter(ad => ad.subject.includes(selectedCourse));
+        }
+
+        // Фильтрация по типу поиска
+        if (selectedSearchType) {
+            filteredAds = filteredAds.filter(ad => ad.searchType === selectedSearchType);
+        }
+
+        // Очистка контейнера и добавление отфильтрованных карточек
+        container.innerHTML = '';
+        filteredAds.forEach((ad) => {
+            const card = createCard(ad);
+            container.appendChild(card);
+        });
+    }
+
+    // Функция для загрузки карточек
     async function loadCards() {
         try {
             const response = await fetch('http://localhost:8080/api/ads');
             if (!response.ok) {
                 throw new Error(`Server error: ${response.status} ${response.statusText}`);
             }
-            const data = await response.json(); // Ожидаем JSON
-            console.log("Ads received:", data); // Для отладки
-            data.forEach((ad) => {
-                const card = createCard(ad);
-                container.appendChild(card);
-            });
+            ads = await response.json(); // Ожидаем JSON
+            console.log("Ads received:", ads); // Для отладки
+
+            filterAndDisplayAds(); // Показываем все карточки после загрузки
+
         } catch (error) {
             console.error('Error fetching ads:', error);
             alert('Failed to load ads. Check the console for more details.');
         }
     }
 
+    // Инициализация
+    async function init() {
+        const response = await fetch('/api/user-info', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
 
-    // Load cards on page load
-    loadCards();
+        if (response.ok) {
+            const userInfo = await response.text();
+            currentUserId = parseInt(userInfo.match(/ID: (\d+)/)[1]); // Получаем ID пользователя из ответа
+            loadCards(); // Загружаем карточки
+        } else {
+            alert('Не удалось получить данные пользователя');
+        }
+    }
+
+    // Добавляем обработчики событий для поиска и фильтров
+    searchInput.addEventListener('input', filterAndDisplayAds);
+    alphabetFilter.addEventListener('change', filterAndDisplayAds);
+    courseFilter.addEventListener('change', filterAndDisplayAds);
+    searchTypeFilter.addEventListener('change', filterAndDisplayAds);
+
+    // Загружаем данные при старте
+    init();
 </script>
+
 </body>
 </html>

@@ -9,21 +9,90 @@
 <body class="bg-gray-50 text-gray-900">
 
 <div class="flex items-center justify-center min-h-screen">
-  <form action="/login" method="post" class="bg-white p-6 rounded shadow-md w-full max-w-md">
+  <form
+          action="/login"
+          method="post"
+          class="bg-white p-6 rounded shadow-md w-full max-w-md"
+          onsubmit="return handleLogin(event)">
     <h2 class="text-2xl font-semibold mb-4 text-center">Вход</h2>
+
+    <div id="error-message" class="text-red-500 text-center mb-4 hidden"></div>
+
     <div class="mb-4">
       <label for="username" class="block text-gray-700">Имя пользователя</label>
-      <input type="text" id="username" name="username" class="w-full p-2 border rounded">
+      <input type="text" id="username" name="username" class="w-full p-2 border rounded" required>
     </div>
     <div class="mb-4">
       <label for="password" class="block text-gray-700">Пароль</label>
-      <input type="password" id="password" name="password" class="w-full p-2 border rounded">
+      <input type="password" id="password" name="password" class="w-full p-2 border rounded" required>
     </div>
     <button type="submit" class="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
       Войти
     </button>
   </form>
+
+  <!-- Кнопка для выхода, всегда видимая -->
+  <form id="logout-form" action="/logout" method="POST" class="mt-4">
+    <button type="submit" class="w-full bg-red-500 text-white py-2 rounded hover:bg-red-600">
+      Выйти
+    </button>
+  </form>
 </div>
+
+<script>
+  async function handleLogin(event) {
+    event.preventDefault(); // Останавливаем стандартное поведение формы
+
+    const form = event.target;
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData);
+
+    try {
+      const response = await fetch('/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams(data),
+      });
+
+      if (response.ok) {
+        // Если вход успешен, перенаправляем пользователя
+        window.location.href = '/main.html';
+      } else {
+        // Если ошибка, показываем сообщение
+        const errorText = await response.text();
+        const errorMessage = document.getElementById('error-message');
+        errorMessage.textContent = errorText;
+        errorMessage.classList.remove('hidden');
+      }
+    } catch (error) {
+      console.error('Ошибка при попытке входа:', error);
+      alert('Произошла ошибка. Попробуйте снова позже.');
+    }
+  }
+
+  // Обработка выхода (POST-запрос на /logout)
+  document.getElementById('logout-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    try {
+      const response = await fetch('/logout', {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        // После успешного выхода, перенаправляем на страницу входа
+        window.location.href = '/login.html';
+      } else {
+        alert('Не удалось выйти. Попробуйте снова.');
+      }
+    } catch (error) {
+      console.error('Ошибка при выходе:', error);
+      alert('Произошла ошибка. Попробуйте снова позже.');
+    }
+  });
+</script>
 
 </body>
 </html>

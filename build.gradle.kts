@@ -41,4 +41,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1") // зависимость для сериализации
     implementation("io.ktor:ktor-server-cors-jvm:2.3.4")
 //    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.x.x")
+    implementation("io.ktor:ktor-server-sessions:2.3.4") // Для работы с сессиями
+    implementation("io.ktor:ktor-server-cors:2.3.4") // CORS для междоменных запросов
+    implementation("io.ktor:ktor-server-call-logging:2.3.4") // Логирование запросов
 }

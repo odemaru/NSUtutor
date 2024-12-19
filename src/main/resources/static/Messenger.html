@@ -2,117 +2,215 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Messenger</title>
-  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    #message-container {
-      border: 1px solid #ccc;
-      height: 400px;
-      overflow-y: scroll;
-      margin-bottom: 20px;
-    }
-    .message {
-      margin: 10px;
-      padding: 10px;
-      border-radius: 5px;
-    }
-    .sent {
-      background-color: #e6f3ff;
-      text-align: right;
-    }
-    .received {
-      background-color: #f0f0f0;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Мессенджер</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 </head>
-<body>
-<h1>Messenger</h1>
+<body class="bg-gray-50 text-gray-900">
 
-<div>
-  <label for="sender">Sender ID:</label>
-  <input type="number" id="sender" required>
+<!-- Header -->
+<header class="bg-white shadow-sm sticky top-0 z-10">
+  <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+    <a href="/" class="text-gray-600 hover:text-blue-600">Главная</a>
+    <span class="font-semibold text-lg text-blue-600">Мессенджер</span>
+  </div>
+</header>
 
-  <label for="receiver">Receiver ID:</label>
-  <input type="number" id="receiver" required>
-</div>
+<!-- Messenger UI -->
+<main class="container mx-auto px-4 py-12 flex gap-8">
+  <!-- Chat List -->
+  <div class="w-1/3 bg-white p-4 rounded-lg shadow-md h-[80vh] overflow-y-auto">
+    <h3 class="text-xl font-semibold mb-4">Чаты</h3>
+    <div id="chat-list">
+      <!-- Список чатов будет здесь -->
+    </div>
+  </div>
 
-<div id="message-container"></div>
-
-<div>
-  <textarea id="message-input" rows="3" cols="50" placeholder="Type your message..."></textarea>
-  <button onclick="sendMessage()">Send</button>
-  <button onclick="loadMessages()">Refresh Messages</button>
-</div>
+  <!-- Active Chat -->
+  <div class="flex-1 bg-white p-4 rounded-lg shadow-md h-[80vh] flex flex-col">
+    <h3 class="text-xl font-semibold mb-4" id="active-chat-title">Выберите чат</h3>
+    <div id="messages" class="flex-1 overflow-y-auto mb-4">
+      <!-- Сообщения будут здесь -->
+    </div>
+    <div class="flex">
+      <input type="text" id="message-input" class="w-full p-2 border rounded-l-lg focus:outline-none" placeholder="Напишите сообщение..." />
+      <button id="send-message" class="bg-blue-500 text-white p-2 rounded-r-lg hover:bg-blue-600">Отправить</button>
+    </div>
+  </div>
+</main>
 
 <script>
-  let currentSenderId = null;
-  let currentReceiverId = null;
+  const token = sessionStorage.getItem('token');
+  let currentUserId = null;
+  let activeChatUserId = null;
 
-  function sendMessage() {
-    const senderId = document.getElementById('sender').value;
-    const receiverId = document.getElementById('receiver').value;
-    const content = document.getElementById('message-input').value;
+  // Получаем параметры URL для открытия чата при переходе по кнопке "Связаться"
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialChatUserId = urlParams.get('userId');
+  const authorId = urlParams.get('authorId');
 
-    if (!senderId || !receiverId || !content) {
-      alert('Please fill all fields');
-      return;
+  // Функция для загрузки списка контактов
+  async function loadContacts() {
+    try {
+      const response = await fetch(`/api/messages/contacts/${currentUserId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) throw new Error('Failed to load contacts');
+
+      const contacts = await response.json();
+      const chatList = document.getElementById('chat-list');
+      chatList.innerHTML = '';
+
+      contacts.forEach(contact => {
+        const chatItem = document.createElement('div');
+        chatItem.className = 'p-2 hover:bg-gray-100 rounded cursor-pointer';
+        chatItem.textContent = contact.username;
+        chatItem.addEventListener('click', () => openConversation(contact.id, contact.username));
+        chatList.appendChild(chatItem);
+      });
+    } catch (error) {
+      console.error('Error loading contacts:', error);
     }
-
-    axios.post('/api/messages/send', new URLSearchParams({
-      senderId,
-      receiverId,
-      content
-    }))
-            .then(response => {
-              document.getElementById('message-input').value = '';
-              loadMessages(senderId, receiverId);
-            })
-            .catch(error => {
-              console.error('Error:', error);
-              alert('Failed to send message');
-            });
   }
 
-  function loadMessages(senderId = null, receiverId = null) {
-    senderId = senderId || document.getElementById('sender').value;
-    receiverId = receiverId || document.getElementById('receiver').value;
+  // Функция для открытия или создания переписки
+  async function openConversation(userId, username = '') {
+    try {
+      const response = await fetch(`/api/messages/conversation/open?user1Id=${currentUserId}&user2Id=${userId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
 
-    if (!senderId || !receiverId) {
-      alert('Please enter sender and receiver IDs');
-      return;
+      if (!response.ok) throw new Error('Failed to open conversation');
+
+      const messages = await response.json();
+      activeChatUserId = userId;
+
+      // Обновляем заголовок чата
+      document.getElementById('active-chat-title').textContent = username || `Чат с ID: ${userId}`;
+
+      // Отображаем сообщения
+      displayMessages(messages);
+
+      // Помечаем сообщения как прочитанные
+      markMessagesAsRead(userId);
+    } catch (error) {
+      console.error('Error opening conversation:', error);
     }
-
-    // Store current context
-    currentSenderId = senderId;
-    currentReceiverId = receiverId;
-
-    axios.get(`/api/messages?user1Id=${senderId}&user2Id=${receiverId}`)
-            .then(response => {
-              const messageContainer = document.getElementById('message-container');
-              messageContainer.innerHTML = '';
-
-              response.data.forEach(msg => {
-                const messageDiv = document.createElement('div');
-                messageDiv.classList.add('message');
-                messageDiv.classList.add(msg.senderId == senderId ? 'sent' : 'received');
-                messageDiv.textContent = `${msg.content} (From: ${msg.senderId}, At: ${msg.timestamp})`;
-                messageContainer.appendChild(messageDiv);
-              });
-
-              // Scroll to bottom
-              messageContainer.scrollTop = messageContainer.scrollHeight;
-            })
-            .catch(error => {
-              console.error('Error:', error);
-              alert('Failed to load messages');
-            });
   }
+
+  // Функция для отображения сообщений
+  function displayMessages(messages) {
+    const messagesContainer = document.getElementById('messages');
+    messagesContainer.innerHTML = '';
+
+    messages.forEach(message => {
+      const messageElement = document.createElement('div');
+      messageElement.className = `mb-2 p-2 rounded-lg ${
+              message.senderId === currentUserId
+                      ? 'bg-blue-100 ml-auto'
+                      : 'bg-gray-100'
+      }`;
+      messageElement.style.maxWidth = '80%';
+      messageElement.textContent = message.content;
+      messagesContainer.appendChild(messageElement);
+    });
+
+    // Прокручиваем к последнему сообщению
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+
+  // Функция для отправки сообщения
+  async function sendMessage(content) {
+    if (!activeChatUserId || !content.trim()) return;
+
+    try {
+      const response = await fetch('/api/messages/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          senderId: currentUserId,
+          receiverId: activeChatUserId,
+          content: content
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to send message');
+
+      // Перезагружаем сообщения
+      openConversation(activeChatUserId);
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
+  }
+
+  // Функция для пометки сообщений как прочитанных
+  async function markMessagesAsRead(senderId) {
+    try {
+      await fetch('/api/messages/read', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          receiverId: currentUserId,
+          senderId: senderId
+        })
+      });
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+    }
+  }
+
+  // Обработчик отправки сообщения
+  document.getElementById('send-message').addEventListener('click', () => {
+    const input = document.getElementById('message-input');
+    const content = input.value;
+    if (content.trim()) {
+      sendMessage(content);
+      input.value = '';
+    }
+  });
+
+  // Обработчик Enter для отправки сообщения
+  document.getElementById('message-input').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      document.getElementById('send-message').click();
+    }
+  });
+
+  // Инициализация
+  async function init() {
+    try {
+      const response = await fetch('/api/user-info', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) throw new Error('Failed to get user info');
+
+      const userInfo = await response.text();
+      currentUserId = parseInt(userInfo.match(/ID: (\d+)/)[1]);
+
+      // Загружаем контакты
+      await loadContacts();
+
+      // Если есть параметры URL для открытия чата
+      if (authorId) {
+        await openConversation(parseInt(authorId));
+      }
+    } catch (error) {
+      console.error('Initialization error:', error);
+    }
+  }
+
+  init();
 </script>
+
 </body>
 </html>

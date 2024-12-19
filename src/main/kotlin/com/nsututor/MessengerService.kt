@@ -24,17 +24,31 @@ object Messages : Table() {
 }
 
 object MessengerService {
-    // Отправить сообщение от одного пользователя другому
-    fun sendMessage(senderId: Int, receiverId: Int, content: String): Message {
+    fun openOrCreateConversation(user1Id: Int, user2Id: Int): List<Message> {
         return transaction {
-            // Проверка существования отправителя и получателя
-            val senderExists = Users.select { Users.id eq senderId }.count() > 0
-            val receiverExists = Users.select { Users.id eq receiverId }.count() > 0
+            // Проверяем существует ли переписка (есть ли сообщения между пользователями)
+            val existingMessages = Messages.select {
+                (Messages.senderId eq user1Id and (Messages.receiverId eq user2Id)) or
+                        (Messages.senderId eq user2Id and (Messages.receiverId eq user1Id))
+            }.count() > 0
 
-            if (!senderExists || !receiverExists) {
-                throw IllegalArgumentException("Invalid sender or receiver")
+            if (!existingMessages) {
+                // Если переписки нет, создаем первое системное сообщение
+                Messages.insert {
+                    it[senderId] = user1Id
+                    it[receiverId] = user2Id
+                    it[content] = "Переписка создана"
+                    it[isRead] = true
+                }
             }
 
+            // Возвращаем все сообщения между пользователями
+            getMessagesBetweenUsers(user1Id, user2Id)
+        }
+    }
+
+    fun sendMessage(senderId: Int, receiverId: Int, content: String): Message {
+        return transaction {
             val messageId = Messages.insert {
                 it[Messages.senderId] = senderId
                 it[Messages.receiverId] = receiverId
@@ -46,18 +60,18 @@ object MessengerService {
                 id = messageId,
                 senderId = senderId,
                 receiverId = receiverId,
-                content = content
+                content = content,
+                isRead = false
             )
         }
     }
 
-    // Получить сообщения между двумя пользователями
     fun getMessagesBetweenUsers(user1Id: Int, user2Id: Int): List<Message> {
         return transaction {
             Messages.select {
                 (Messages.senderId eq user1Id and (Messages.receiverId eq user2Id)) or
                         (Messages.senderId eq user2Id and (Messages.receiverId eq user1Id))
-            }.orderBy(Messages.id)
+            }.orderBy(Messages.id, SortOrder.ASC)
                 .map {
                     Message(
                         id = it[Messages.id],
@@ -70,111 +84,64 @@ object MessengerService {
         }
     }
 
-    // Пометить сообщения как прочитанные
     fun markMessagesAsRead(receiverId: Int, senderId: Int) {
         transaction {
             Messages.update({
-                (Messages.receiverId eq receiverId) and
-                        (Messages.senderId eq senderId) and
-                        (Messages.isRead eq false)
+                Messages.receiverId eq receiverId and (Messages.senderId eq senderId) and (Messages.isRead eq false)
             }) {
                 it[isRead] = true
             }
         }
     }
 
-    // Получить количество непрочитанных сообщений
     fun getUnreadMessageCount(userId: Int): Int {
         return transaction {
             Messages.select {
-                (Messages.receiverId eq userId) and (Messages.isRead eq false)
+                Messages.receiverId eq userId and (Messages.isRead eq false)
             }.count().toInt()
         }
     }
 
-    // Получить недавние контакты пользователя
-    fun getRecentContacts(userId: Int, limit: Int = 10): List<Int> {
+    fun getRecentContacts(userId: Int): List<User> {
         return transaction {
-            (Messages.slice(Messages.senderId, Messages.receiverId)
-                .select {
-                    (Messages.senderId eq userId) or (Messages.receiverId eq userId)
+            val uniqueUserIds = (Messages
+                .slice(Messages.senderId)
+                .select { Messages.receiverId eq userId }
+                .map { it[Messages.senderId] } +
+                    Messages
+                        .slice(Messages.receiverId)
+                        .select { Messages.senderId eq userId }
+                        .map { it[Messages.receiverId] })
+                .distinct()
+
+            Users.select { Users.id inList uniqueUserIds }
+                .map {
+                    User(
+                        id = it[Users.id],
+                        username = it[Users.username],
+                        password = "" // Don't send password
+                    )
                 }
-                .groupBy(Messages.senderId, Messages.receiverId)
-                .orderBy(Messages.id.max(), SortOrder.DESC)
-                .limit(limit)
-                .map { row ->
-                    if (row[Messages.senderId] == userId) row[Messages.receiverId]
-                    else row[Messages.senderId]
-                })
         }
     }
 
-    // Создание тестовой переписки
-    fun createInitialConversation() {
-        transaction {
-            // Создаем тестовых пользователей, если их нет
-            val user1Id = Users.insert {
-                it[username] = "testuser1"
-                it[password] = "password1" // В реальности нужно хешировать
-                it[role] = "student"
-            } get Users.id
-
-            val user2Id = Users.insert {
-                it[username] = "testuser2"
-                it[password] = "password2" // В реальности нужно хешировать
-                it[role] = "student"
-            } get Users.id
-
-            // Создаем несколько тестовых сообщений
-            val messages = listOf(
-                Message(
-                    senderId = user1Id,
-                    receiverId = user2Id,
-                    content = "Привет! Как дела?"
-                ),
-                Message(
-                    senderId = user2Id,
-                    receiverId = user1Id,
-                    content = "Привет! Все хорошо, готовлюсь к экзамену."
-                ),
-                Message(
-                    senderId = user1Id,
-                    receiverId = user2Id,
-                    content = "Удачи! Чем помочь?"
-                ),
-                Message(
-                    senderId = user2Id,
-                    receiverId = user1Id,
-                    content = "Спасибо! Нужна помощь по математике."
-                )
-            )
-
-            // Вставляем сообщения в базу данных
-            messages.forEach { message ->
-                Messages.insert {
-                    it[senderId] = message.senderId
-                    it[receiverId] = message.receiverId
-                    it[content] = message.content
-                    it[isRead] = false
-                }
-            }
-        }
-    }
-
-    // Получение ID тестовых пользователей
-    fun getTestUserIds(): Pair<Int, Int> {
+    fun getLastMessage(user1Id: Int, user2Id: Int): Message? {
         return transaction {
-            val user1 = Users.select { Users.username eq "testuser1" }.firstOrNull()
-            val user2 = Users.select { Users.username eq "testuser2" }.firstOrNull()
-
-            if (user1 == null || user2 == null) {
-                throw IllegalStateException("Тестовые пользователи не созданы. Сначала вызовите createInitialConversation()")
-            }
-
-            Pair(
-                user1[Users.id],
-                user2[Users.id]
-            )
+            Messages.select {
+                (Messages.senderId eq user1Id and (Messages.receiverId eq user2Id)) or
+                        (Messages.senderId eq user2Id and (Messages.receiverId eq user1Id))
+            }.orderBy(Messages.id to SortOrder.DESC)
+                .limit(1)
+                .map {
+                    Message(
+                        id = it[Messages.id],
+                        senderId = it[Messages.senderId],
+                        receiverId = it[Messages.receiverId],
+                        content = it[Messages.content],
+                        isRead = it[Messages.isRead]
+                    )
+                }
+                .firstOrNull()
         }
     }
 }

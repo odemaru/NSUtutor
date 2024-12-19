@@ -3,6 +3,7 @@ package com.nsututor
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.mindrot.jbcrypt.BCrypt
+import kotlinx.serialization.Serializable
 
 // Таблица пользователей
 object Users : Table() {
@@ -13,8 +14,13 @@ object Users : Table() {
     override val primaryKey = PrimaryKey(id)
 }
 
-// Класс для работы с пользователями
-class User(val id: Int, val username: String, val password: String) {
+
+@Serializable // Добавляем аннотацию @Serializable
+data class User(
+    val id: Int,
+    val username: String,
+    @Transient val password: String // Убираем пароль из сериализации
+) {
 
     companion object {
 
@@ -69,6 +75,25 @@ class User(val id: Int, val username: String, val password: String) {
                         it[Users.password] = hashedPassword
                         it[Users.role] = "Student"
                     }
+                }
+            }
+        }
+        // Функция для изменения пароля
+        fun changePassword(userId: Int, oldPassword: String, newPassword: String): Boolean {
+            return transaction {
+                val user = Users.select { Users.id eq userId }.singleOrNull()
+
+                if (user != null && BCrypt.checkpw(oldPassword, user[Users.password])) {
+                    // Хешируем новый пароль
+                    val hashedPassword = BCrypt.hashpw(newPassword, BCrypt.gensalt())
+
+                    // Обновляем пароль в базе данных
+                    Users.update({ Users.id eq userId }) {
+                        it[password] = hashedPassword
+                    }
+                    true
+                } else {
+                    false
                 }
             }
         }
